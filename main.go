@@ -3,17 +3,18 @@ package main
 import (
 	"net/http"
 
-	"github.com/DB-Vincent/k8s-demo-app/web"
+	"github.com/DB-Vincent/k8s-demo-app/html"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		p := web.EnvParams{
-		  Title:    "Some cool title",
-		  Version:  "v1.27.1"
-		}
-
-		web.Env(w, p)
-	})
+	http.HandleFunc("/env", env)
 	http.ListenAndServe(":8080", nil)
+}
+
+func env(w http.ResponseWriter, r *http.Request) {
+	p := html.EnvParams{
+		Title:   "Some super cool title",
+		Message: "Hello there!",
+	}
+	html.Env(w, p)
 }
