@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: default
+  name: k8s-demo-app-robot
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: default
+  name: k8s-demo-app
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "services", "nodes"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-demo-app
+subjects:
+  - kind: ServiceAccount
+    name: k8s-demo-app-robot
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: k8s-demo-app
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: default
+  name: k8s-demo-app
+  labels:
+    app: k8s-demo-app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+  selector:
+    app: k8s-demo-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: default
+  name: k8s-demo-app
+  labels:
+    app: k8s-demo-app
+spec:
+  containers:
+    - name: k8s-demo-app
+      image: vincentdebo/k8s-demo-app:latest
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 8080
+  serviceAccount: k8s-demo-app-robot
+  serviceAccountName: k8s-demo-app-robot

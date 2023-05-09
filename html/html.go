@@ -14,8 +14,12 @@ var (
 )
 
 type EnvParams struct {
-	Title   string
-	Message string
+	Title           string
+	Version         string
+	PodCount        int
+	NamespaceCount  int
+	ServiceCount    int
+	NodeCount       int
 }
 
 func Env(w io.Writer, p EnvParams) error {
