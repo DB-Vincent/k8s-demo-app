@@ -58,3 +58,23 @@ spec:
         - containerPort: 8080
   serviceAccount: k8s-demo-app-robot
   serviceAccountName: k8s-demo-app-robot
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: default
+  name: postgres
+  labels:
+    app: k8s-demo-app
+spec:
+  containers:
+    - name: postgres
+      image: postgres:15.3-alpine3.18
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: "POSTGRES_USER"
+          value: postgres
+        - name: "POSTGRES_PASSWORD"
+          value: postgres
+      ports:
+        - containerPort: 5432

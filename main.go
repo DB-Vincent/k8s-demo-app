@@ -1,67 +1,64 @@
 package main
 
 import (
-	"net/http"
-	"context"
-  "fmt"
-//   "time"
+  "net/http"
+  "database/sql"
+//   "encoding/json"
 
-  metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  "k8s.io/client-go/discovery"
-//   "k8s.io/client-go/kubernetes"
-//   "k8s.io/client-go/rest"
+  "github.com/gin-gonic/gin"
 
-	"github.com/DB-Vincent/k8s-demo-app/html"
-	"github.com/DB-Vincent/k8s-demo-app/utils"
+  "github.com/DB-Vincent/k8s-demo-app/db"
 )
 
 func main() {
-	http.HandleFunc("/", env)
-	http.ListenAndServe(":8080", nil)
+	psql := db.Connect()
+
+	defer psql.Close()
+
+  r := gin.Default()
+  r.GET("/ping", func(c *gin.Context) {
+    c.JSON(http.StatusOK, gin.H{
+      "message": "pong",
+    })
+  })
+
+  r.GET("/", func(c *gin.Context) {
+    quoteList, err := getAllQuotes(psql)
+    if err != nil {
+      panic(err)
+    }
+
+		c.JSON(http.StatusOK, gin.H{
+			"quotes": quoteList,
+		})
+	})
+
+  r.Run()
 }
 
-func env(w http.ResponseWriter, r *http.Request) {
-	// Initialize environment
-  	opts := &utils.KubeConfigOptions{}
-    opts.Init()
+type Quote struct {
+	ID int
+	Message string
+}
 
-  discoveryClient, err := discovery.NewDiscoveryClientForConfig(opts.Config)
-  if err != nil {
-      fmt.Printf(" error in discoveryClient %v",err)
-  }
+func getAllQuotes(db *sql.DB) ([]string, error) {
+    rows, err := db.Query("SELECT * FROM QUOTE")
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-  serverVersion, err := discoveryClient.ServerVersion()
-  if err != nil{
-      fmt.Println("Error while fetching server version information", err)
-  }
+    var quotes []string
 
-  pods, err := opts.Client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-  if err != nil {
-    panic(err.Error())
-  }
-
-  namespaces, err := opts.Client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
-  if err != nil {
-    panic(err.Error())
-  }
-
-  services, err := opts.Client.CoreV1().Services("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-	  panic(err.Error())
-	}
-
-	nodes, err := opts.Client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-  if err != nil {
-    panic(err.Error())
-  }
-
-	p := html.EnvParams{
-		Title:          "k8s-demo-app",
-		Version:        fmt.Sprintf("v%s.%s (%s)", serverVersion.Major, serverVersion.Minor, serverVersion.Platform),
-		PodCount:       len(pods.Items),
-		NamespaceCount: len(namespaces.Items),
-		ServiceCount:   len(services.Items),
-		NodeCount:      len(nodes.Items),
-	}
-	html.Env(w, p)
+    for rows.Next() {
+        var quote Quote
+        if err := rows.Scan(&quote.ID, &quote.Message); err != nil {
+          return quotes, err
+        }
+        quotes = append(quotes, quote.Message)
+    }
+    if err = rows.Err(); err != nil {
+        return quotes, err
+    }
+    return quotes, nil
 }
